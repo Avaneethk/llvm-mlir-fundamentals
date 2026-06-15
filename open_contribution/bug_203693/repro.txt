@@ -1,0 +1,72 @@
+                 module
+                    │
+                    ▼
+             func @main()
+                    │
+                    ▼
+      ┌────────────────────────┐
+      │ tosa.const             │
+      │ all elements = 6220    │
+      └────────────────────────┘
+                    │
+                  %7
+                    │
+      ┌────────────────────────┐
+      │ tosa.const             │
+      │ all elements = -298    │
+      └────────────────────────┘
+                    │
+                  %9
+                    │
+                    ▼
+          tosa.bitwise_or
+              %7 , %9
+                    │
+                    ▼
+                  %51
+      tensor<1x6x6xi32>
+                    │
+                    ▼
+             tensor.cast
+                    │
+                    ▼
+           tensor<*xi32>
+                    │
+                    ▼
+         call @printMemrefI32
+                    │
+                    ▼
+                 return 
+ 
+ 
+ 
+ 
+ /wrk/open_contributions/llvm-project/build/bin/mlir-opt test2.mlir -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" | /wrk/open_contributions/llvm-project/build/bin/mlir-opt -tosa-to-arith  -one-shot-bufferize="bufferize-function-boundaries" -convert-linalg-to-parallel-loops            -convert-index-to-llvm      -convert-arith-to-llvm    --canonicalize  --scf-parallel-loop-tiling="parallel-loop-tile-sizes=1,4 no-min-max-bounds=true"   -convert-scf-to-cf       -convert-arith-to-llvm       -convert-cf-to-llvm  -finalize-memref-to-llvm   -conv
+ert-func-to-llvm  -lower-affine  -convert-arith-to-llvm  -reconcile-unrealized-casts | timeout 10 /wrk/open_contributions/llvm-project/build/bin/mlir-runner -e mai
+n -entry-point-result=void  --shared-libs=/wrk/open_contributions/llvm-project/build/lib/libmlir_c_runner_utils.so  --shared-libs=/wrk/open_contributions/llvm-proj
+ect/build/lib/libmlir_runner_utils.so  --shared-libs=/wrk/open_contributions/llvm-project/build/lib/libmlir_async_runtime.so
+
+Unranked Memref base@ = 0x574c177089c0 rank = 3 offset = 0 sizes = [1, 6, 6] strides = [36, 6, 1] data = 
+[[[-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290]]]
+
+
+/wrk/open_contributions/llvm-project/build/bin/mlir-opt test2.mlir -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" | /wrk/open_contributions/llvm-project/build/bin/mlir-opt -tosa-to-arith  -one-shot-bufferize="bufferize-function-boundaries" -convert-linalg-to-parallel-loops            -convert-index-to-llvm      -convert-arith-to-llvm    --scf-parallel-loop-tiling="parallel-loop-tile-sizes=1,4 no-min-max-bounds=true"    --canonicalize  --scf-parallel-loop-tiling="parallel-loop-tile-sizes=1,4 no-min-max-bounds=true"   -convert-scf-to-cf       -convert-arith-to-llvm       -convert-cf-to-llvm  -finalize-memref-to-llvm   -convert-func-to-llvm  -lower-affine  -convert-arith-to-llvm  -reconcile-unrealized-casts | timeout 10 /wrk/open_contributions/llvm-project/build/bin/mlir-runner -e main -entry-point-result=void  --shared-libs=/wrk/open_contributions/llvm-project/build/lib/libmlir_c_runner_utils.so  --shared-libs=/wrk/open_contributions/llvm-project/build/lib/libmlir_runner_utils.so  --shared-libs=/wrk/open_contributions/llvm-project/build/lib/libmlir_async_runtime.so
+
+  Unranked Memref base@ = 0x5dd407b23540 rank = 3 offset = 0 sizes = [1, 6, 6] strides = [36, 6, 1] data = 
+[[[-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [-290,    -290,    -290,    -290,    -290,    -290], 
+  [0,    0,    0,    0,    0,    0], 
+  [0,    0,    2,    0,    0,    0]]]
+
+
+  As per observation the issue is with --scf-parallel-loop-tiling="parallel-loop-tile-sizes=1,4 no-min-max-bounds=true"  before canonicalize optimization.
+  Issue seems to be with no-min-max-bounds=true
+
+  https://github.com/llvm/llvm-project/issues/203693
