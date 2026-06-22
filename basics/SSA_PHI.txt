@@ -1,0 +1,120 @@
+int sum(int n)
+{
+    int i = 0;
+    int s = 0;
+
+    for(i = 0; i < n; i++)
+    {
+        s = s + i;
+    }
+
+    return s;
+}
+
+Always learn to draw PHI nodes given any mlir and then plan for analysis and transformation
+
+           entry
+             |
+             v
+        loop.header
+             |
+        i < n ?
+         /   \
+        /     \
+      yes      no
+       |        |
+       v        v
+    loop.body  exit
+       |
+       v
+    loop.latch
+       |
+       +--------+
+                |
+                v
+          loop.header
+
+"back edge loop.latch & loop.header" **
+
+define @sum(i32 %n)
+{
+    %entry:
+    br label %header
+
+    %header:
+     %i=phi i32 [0,%entry],[%i_next,%latch]
+     %s=phi i32 [0,%entry],[%s_next,%latch]
+
+    ; convert i32 to i1 
+    %cond_bool=icmp slt i32 %i,%n
+    br 1 %cond_bool , label %body , label %exit
+
+    %body:
+    %s_next=add i32 %s,1
+    br label %header
+
+    %latch:
+    %i_next=add i32 %i,1
+    br label %header
+
+    %exit:
+    return i32 %s
+
+}
+
+//SSA is a DAG once it lowers to CFG it introdues back edges or cylcles ?
+//How do I detect a cycle formation in the above IR and tell which blocks are forming cycle ?
+
+MLIR form 
+module{
+    func.func @sum(%n:i32)->i32 ;focus on this difference 
+    {
+        %c0=arith.constant 0:i32 ; declare a contant value
+        cf.br ^header(%c0,%c0:i32,i32) ;move to header branch
+
+        ^header(%i:i32,%s:i32): ; header declaration
+            %cond = arith.cmp slt %i,%n:i32 ; comparision from arith dialect 
+            cf.cond_br, ^body(%i,%s:i32,i32),^exit(%s:i32) ; conditional branching 
+
+        ^body(%i:i32,%s:i32): ;body declaration 
+            %s_next=arith.add %s,%i:i32
+            %c=arith.const 1:i32
+            %i_next=arith.add %i,1
+            cf.br ^header(%i_next,%s_next:i32,i32)
+        
+        ^exit(%x:i32)
+        func.return %x:i32
+
+    }
+}
+
+
+The Most Important Insight
+
+For an if statement:
+
+then ----\
+          \
+           merge
+          /
+else ----/
+
+PHI chooses among multiple incoming values.
+
+For a loop:
+
+entry ----\
+           \
+            header
+           /
+latch ----/
+
+PHI chooses between:
+
+Initial value
+
+OR
+
+Previous iteration value
+
+This is called a "loop-carried dependency".

@@ -1,0 +1,83 @@
+int foo(int a, int b)
+{
+    int x;
+
+    if (a > 0)
+        x = a + b;
+    else
+        x = a - b;
+
+    int y = x * 2;
+
+    return y;
+}
+
+LLVM IR 
+
+define @foo(i32 %a,i32 %b)
+{
+    %cond_bool=icmp sgt i32 %a,0
+    br i1 %cond_bool,label %then,label %else ; conditional branching
+
+    %then:
+    %x_then=add i32 %a,%b 
+    br label %merge
+
+    %else:
+    %x_else=sub i32 %a,%b 
+    br label merge
+
+    %merge:
+    %x=phi i32[%x_then,%then],[%x_else,%else]
+
+    %y=mul i32 %x,2
+
+    return %y
+}
+
+MLIR 
+module{
+    func.func @foo(%a:i32,%b:i32)
+    {
+
+        %c0 = arith.constant 0 : i32
+        %cond = arith.cmpi sgt, %a, %c0 : i32
+        cf.cond_br %cond , ^then , ^else 
+
+        ^then:
+        %d=arith.add %a,%b:i32
+        cf.br ^merge(%d) ;block arguments
+
+        ^else:
+        %s=arith.sub %a,%b:i32
+        cf.br ^merge(%s) ;block arguments
+
+        ^merge(%x:i32): ; evaluating based on block arguments
+        %const=arith.constant 2:i32
+        %y=arith.mul %x,%const:i32
+        ret %y:i32
+
+
+    }
+}
+
+Module
+└── FuncOp
+    └── Region
+        ├── Block(entry)
+        │   ├── constant
+        │   ├── cmpi
+        │   └── cond_br
+        │
+        ├── Block(then)
+        │   ├── addi
+        │   └── br
+        │
+        ├── Block(else)
+        │   ├── subi
+        │   └── br
+        │
+        └── Block(merge)
+            ├── constant
+            ├── muli
+            └── return

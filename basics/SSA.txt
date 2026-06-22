@@ -1,0 +1,84 @@
+SSA (Static Single Assignment) is probably the single most important concept in LLVM and MLIR. If you deeply understand SSA, then:
+
+Use-Def chains become obvious
+DCE becomes obvious
+Constant propagation becomes obvious
+Dominance becomes obvious
+PHI nodes become obvious
+MLIR block arguments become obvious
+
+Every variable gets assigned exactly once. Hence, static single assignment .
+
+int add(int a,int b)
+{
+    int c = a+b;
+    int d = c*2;
+    return d;
+}
+
+Type will come before in LLVM and in mlir after with :
+; ModuleID = 'add_module'
+define i32 @add(i32 %a, i32 %b) {
+entry:
+  %c = add i32 %a, %b
+  %d = mul i32 %c, 2
+  ret i32 %d
+}
+
+module {
+  func.func @add(%a: i32, %b: i32) -> i32 {
+    %c = arith.addi %a, %b : i32
+    %two = arith.constant 2 : i32
+    %d = arith.muli %c, %two : i32
+    return %d : i32
+  }
+}
+
+1. Easier data-flow analysis
+2. Easier optimizations
+3. Def-use chains become explicit
+4. Simplifies constant propagation
+5. Simplifies dead code elimination
+
+Some examples of PHI nodes and yield 
+
+A PHI node selects a value based on the predecessor basic block from which control arrived.
+
+Dominance : Definition must dominate all uses
+
+Valid:
+%1 = add i32 %a,%b
+%2 = mul i32 %1,2
+
+Definition appears before use.
+
+Invalid:
+%2 = mul i32 %1,2
+%1 = add i32 %a,%b
+
+A node A dominates node B if every path from the entry block to B passes through A.
+
+MemReg converts code to SSA (get some understanding of important passes in MLIR and LLVM)
+
+which pass destroys SSA -> PHI elimination
+Why does register allocation dislike SSA?
+Physical registers are reused.
+SSA creates many virtual registers.
+
+Why does DCE love SSA?
+Users are explicit.
+Def-use graph is explicit.
+No alias tracking needed.
+
+What is the difference between LLVM SSA and MLIR SSA?
+LLVM:
+PHI nodes
+
+MLIR:
+Block arguments
+
+Everything else is largely the same SSA model.
+
+When multiple control-flow paths define different SSA values and later merge, we need a mechanism to select the correct value based on the predecessor path taken. LLVM uses PHI nodes for this purpose, while MLIR represents the same concept using block arguments passed through branch operations. 
+
+No. The branch instruction already evaluated the condition and selected the control-flow path. The PHI node only selects the corresponding SSA value based on the predecessor block from which execution arrived.

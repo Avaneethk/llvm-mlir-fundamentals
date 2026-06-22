@@ -1,0 +1,145 @@
+LLVM provides a fixed low-level SSA IR and a mature optimization/code-generation framework, while MLIR provides an extensible multi-level IR framework where new dialects, types, and operations can be defined. MLIR is typically used to progressively lower high-level domain-specific representations into LLVM IR, which is then optimized and translated into machine code.
+
+
+llvm
+
+Module
+ └── Function
+      └── BasicBlock
+           └── Instruction
+
+MLIR
+
+ModuleOp
+ └── FuncOp(region)
+      └── Block
+           └── Operation
+
+Both use use-def , SSA , context , CRTP 
+
+llvm
+
+class MyPass
+ : public PassInfoMixin<MyPass>
+{
+};
+
+MLIR
+
+struct MyPass
+ : public PassWrapper<
+        MyPass,
+        OperationPass<ModuleOp>>
+{
+};
+
+Differences 
+
+LLVM IR contains fixed instructions. Fixed IR 
+It contains the following 
+
+add
+mul
+load
+store
+br
+phi
+call
+
+we cannot create tensor.matmul inside LLVM
+
+MLIR allows custom dialects. Extensible IR 
+tosa.conv2d
+linalg.matmul
+tinyml.conv
+
+LLVM Instruction (around 70-80 opcodes) vs MLIR operation (unlimited)
+LLVM limitied Type system vs Richer MLIR type system 
+
+LLVM
+i32
+i64
+float
+double
+ptr
+vector
+
+MLIR 
+tensor<4x4xf32>
+memref<128xf32>
+vector<16xf32>
+custom types
+
+LLVM pattern match and rewrite manual where as in MLIR it is built in 
+
+LLVM uses TableGen primarily for:
+
+Instructions
+Registers
+Targets
+
+MLIR uses TableGen for:
+
+Operations
+Types
+Attributes
+Passes
+Interfaces
+Dialects
+
+LLVM:
+
+One major abstraction level
+
+Low level.
+
+MLIR:
+
+Tensor level
+Buffer level
+Loop level
+CFG level
+LLVM level
+
+
+LLVM	MLIR
+Module	ModuleOp
+Function	FuncOp
+BasicBlock	Block
+Instruction	Operation
+Value	Value
+Use	OpOperand
+User	Operation
+LLVMContext	MLIRContext
+PassManager	PassManager
+Type	Type  (* In detail)
+Attribute	Attribute (* In detail)
+
+
+Traversal Comparison
+
+LLVM:
+
+for(Function &F : M)
+{
+  for(BasicBlock &BB : F)
+  {
+    for(Instruction &I : BB)
+    {
+    }
+  }
+}
+
+MLIR:
+
+module.walk(
+[](Operation *op)
+{
+});
+
+or
+
+func.walk(
+[](arith::AddIOp op)
+{
+});
