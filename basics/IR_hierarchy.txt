@@ -1,0 +1,86 @@
+module{
+    func.func @main(){
+        %1=arith.add 5,3:i32
+        func.return
+    }
+}
+
+ModuleOp
+  │
+  └── FuncOp main
+        │
+        └── Block
+              │
+              ├── arith.constant
+              └── func.return
+module {
+  func.func @foo() {}
+  func.func @bar() {}
+}
+
+1 module 2 functions
+
+Function owns 
+Blocks
+Arguments
+Attributes
+Regions
+
+IR with multiple blocks 
+
+func.func @foo(%arg0 : i32) {
+
+^bb0:
+  %cmp = arith.cmpi eq, %arg0, %arg0 : i32
+  cf.cond_br %cmp, ^bb1, ^bb2
+
+^bb1:
+  return
+
+^bb2:
+  return
+}
+
+Everything in MLIR is an operation
+Function itself is an Operation
+Module itself is an Operation
+Operation
+ │
+ ├── Operands
+ ├── Results
+ ├── Attributes
+ └── Regions
+
+
+Operation
+    │
+    └── Region
+           │
+           └── Block
+                  │
+                  └── Operation
+
+Operation
+   └── Region
+          └── Block
+                 └── Operation
+                        └── Region
+                               └── Block
+                                      └── Operation
+
+
+ModuleOp
+   │
+   └── Region
+          │
+          └── Block
+                 │
+                 └── FuncOp
+                        │
+                        └── Region
+                               │
+                               └── Block
+                                      │
+                                      └── AddIOp
+
+Practise Traversals

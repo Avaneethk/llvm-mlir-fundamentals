@@ -1,0 +1,157 @@
+int foo(int cond)
+{
+    int x;
+
+    if(cond)
+        x = 10;
+    else
+        x = 20;
+
+    return x;
+}
+
+draw control flow 
+
+      cond
+ true        false
+assign x=10  assign x=20
+       join this using phi (The PHI node only selects the corresponding SSA value based on the predecessor block from which execution arrived.)
+       return x 
+
+
+int foo(int cond)
+{
+    int x;
+
+    if(cond)
+        x = 10;
+    else
+        x = 20;
+
+    return x;
+}
+          entry
+        then  else
+           merge
+            ret
+i1 is the boolean type in llvm 1 bit 
+br i1 <cond>, label <iftrue>, label <iffalse>
+it is a control flow graph        
+define i32 @foo(i32 %cond)
+{
+    entry:
+    %cond_bool = icmp ne i32 %cond, 0        ; produce i1 from an i32
+     br i1 %cond_bool ,label %then,label %else
+
+    %then:
+      br label %merge
+    
+    %else:
+      br label %merge
+
+    %merge:
+    %x=phi i32[10,%then],[20,%else]
+
+    ret i32 %x
+
+
+} value is merged during the PHI node execution 
+
+In MLIR values is passed in branch as block arguments
+
+cf.cond_br %cond , ^then, ^else
+
+^then:
+cf.br ^merge(%c10:i32)
+
+^else:
+cf.br ^merge(%c20:i32)
+
+^merge(x:i32):
+return x:i32
+
+int foo(int cond)
+{
+    int x = 0;
+
+    if(cond)
+        x = 10;
+
+    return x;
+}
+
+LLVM 
+
+define i32 @foo(i32 %cond)
+{
+    //convert i32 to i1 
+    entry:
+    %cond_bool = icmp ne i32 %cond, 0 
+    br i1 %cond_bool,label %then ,label %merge
+
+    %then:
+    br %merge
+
+
+    %merge:
+    %x=phi i32[10,%then],[0,%entry] ; 0 if it is directly coming from entry 
+
+    ret i32 %x
+}
+
+MLIR 
+
+cf.cond_br %cond ,^then,^merge(%c0)
+
+^then:
+br ^merge(%c10:i32)
+
+^merge(%x:i32)
+ret i32 %x
+
+int foo(int a)
+{
+    int x;
+
+    if(a > 0)
+    {
+        if(a > 10)
+            x = 1;
+        else
+            x = 2;
+    }
+    else
+    {
+        x = 3;
+    }
+
+    return x;
+}
+
+<op> <cond> <type> <operands list>
+
+define i32 @foo(i32 %a)
+{
+
+entry:
+ %cond_bool = icmp sgt i32 %a,0
+ br i1 %cond_bool , label %then ,label %else
+
+%then:
+%cond_bool_1 = icmp sgt i32 %a,10
+br i1 %cond_bool_1,label %bb1,label %bb2
+
+%bb1:
+br label %merge
+%bb2:
+br label %merge
+
+%else:
+br label %merge
+
+%merge
+%x = phi i32[1,%bb1],[2,%bb2],[3,%else]
+
+ret i32 %x
+
+}
