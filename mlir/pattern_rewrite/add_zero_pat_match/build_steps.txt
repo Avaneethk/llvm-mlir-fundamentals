@@ -1,0 +1,3 @@
+ cmake -G Ninja .. -DLLVM_DIR=/wrk/llvm-project/build/lib/cmake/llvm -DMLIR_DIR=/wrk/llvm-project/build/lib/cmake/mlir
+ Ninja
+ run app
